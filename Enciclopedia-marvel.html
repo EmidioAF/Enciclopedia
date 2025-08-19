@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enciclopédia de Super-Heróis — Marvel</title>
+  <style>
+    :root{
+      --bg:#0b0f1a; --card:#0f1724; --accent:#e63946; --muted:#94a3b8; --glass: rgba(255,255,255,0.03);
+      --maxw:1100px;
+      --radius:12px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: Inter, system-ui, Arial, sans-serif; background:linear-gradient(180deg,#061021 0%, #071427 50%, #07162a 100%); color:#e6eef8;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      padding:32px; display:flex; align-items:flex-start; justify-content:center;
+    }
+    .wrap{width:100%; max-width:var(--maxw)}
+    header{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px}
+    header h1{margin:0; font-size:22px; letter-spacing:0.4px}
+    header p{margin:0; color:var(--muted)}
+
+    .controls{display:flex; gap:12px; align-items:center}
+    .search{background:var(--glass); border:1px solid rgba(255,255,255,0.03); padding:8px 12px; border-radius:999px; color:inherit}
+    .select{background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--muted); padding:8px 10px; border-radius:8px}
+
+    .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06)); border-radius:var(--radius); padding:18px; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.03); min-height:160px; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease}
+    .card:hover{transform:translateY(-6px); box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+
+    .hero-badge{position:absolute; top:14px; right:14px; padding:6px 10px; border-radius:999px; font-weight:600; font-size:12px; color:#071427}
+
+    .hero-name{font-size:18px; font-weight:700; margin:0 0 6px}
+    .hero-ego{color:var(--muted); font-size:13px; margin:0 0 12px}
+    .stats{display:flex; gap:8px; flex-wrap:wrap}
+    .stat{background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:8px; font-size:12px; color:var(--muted)}
+
+    footer{margin-top:18px; color:var(--muted); font-size:13px}
+
+    /* Modal */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(2,6,23,0.7); display:none; align-items:center; justify-content:center; padding:28px}
+    .modal{background:linear-gradient(180deg,#071427,#071827); border-radius:14px; padding:20px; width:100%; max-width:880px; box-shadow:0 20px 60px rgba(2,6,23,0.7)}
+    .modal-grid{display:grid; grid-template-columns:220px 1fr; gap:18px}
+    .portrait{height:220px; border-radius:12px; background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); display:flex; align-items:center; justify-content:center; font-size:48px;}
+    .modal h2{margin:0 0 6px}
+    .close{background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted); padding:6px 10px; border-radius:8px}
+
+    @media (max-width:640px){.modal-grid{grid-template-columns:1fr} .portrait{height:160px}}
+
+    /* tiny accessibility focus */
+    .card:focus{outline:3px solid rgba(230,57,70,0.18)}
+    .search:focus, .select:focus, .close:focus{outline:3px solid rgba(230,57,70,0.12)}
+
+    /* color accents per hero */
+    .accent-iron{background:linear-gradient(90deg,#ffb70322, #ffb70311); color:#ffb703}
+    .accent-cap{background:linear-gradient(90deg,#3b82f633,#3b82f611); color:#3b82f6}
+    .accent-thor{background:linear-gradient(90deg,#a78bfa33,#a78bfa11); color:#a78bfa}
+    .accent-hulk{background:linear-gradient(90deg,#34d39933,#34d39911); color:#34d399}
+    .accent-widow{background:linear-gradient(90deg,#fb718533,#fb718511); color:#fb7185}
+    .accent-spider{background:linear-gradient(90deg,#ef444433,#ef444411); color:#ef4444}
+    .accent-blackpan{background:linear-gradient(90deg,#94a3b833,#94a3b811); color:#94a3b8}
+    .accent-strange{background:linear-gradient(90deg,#f9731633,#f9731611); color:#f97316}
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main">
+    <header>
+      <div>
+        <h1>Enciclopédia de Super-Heróis — Marvel</h1>
+      </div>
+      <div class="controls">
+        <input class="search" id="search" placeholder="Search" aria-label="Pesquisar herói" />
+        <select id="filter" class="select" aria-label="Filtrar por poder">
+          <option value="all">Filtrar: Todos os poderes</option>
+          <option value="tech">Tecnologia</option>
+          <option value="strength">Força</option>
+          <option value="magic">Magia</option>
+          <option value="agility">Agilidade</option>
+          <option value="stealth">Furtividade</option>
+        </select>
+      </div>
+    </header>
+
+    <section class="grid" id="grid" aria-live="polite"></section>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px">
+        <div>
+          <h2 id="m-name">Nome do Herói</h2>
+          <div id="m-ego" style="color:var(--muted)"></div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center">
+          <div id="m-tags" style="color:var(--muted); font-size:13px"></div>
+          <button class="close" id="closeBtn">Fechar</button>
+        </div>
+      </div>
+      <div class="modal-grid">
+        <div class="portrait" id="m-portrait">🦸</div>
+        <div>
+          <p id="m-bio" style="margin-top:0; color:#dceafc"></p>
+          <h4 style="margin:12px 0 6px">Habilidades e fatos</h4>
+          <ul id="m-list" style="margin:0 0 12px 18px; color:var(--muted)"></ul>
+          <div style="color:var(--muted); font-size:13px"> <span id="m-first"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const HEROES = [
+      {
+        id:'ironman', name:'Iron Man', ego:'Tony Stark',
+        tags:['Tecnologia','Gênio','Bilionário'],
+        bio:'Gênio, inventor e filantropo que usa uma armadura de alta tecnologia para combater ameaças. Líder em tecnologia e membro fundador dos Vingadores.',
+        facts:['Armadura com múltiplas armas','Reator Arc alimenta seus trajes','Especialista em engenharia e IA']
+      },
+      {
+        id:'cap', name:'Captain America', ego:'Steve Rogers',
+        tags:['Força','Liderança','Tática'],
+        bio:'Um supersoldado criado durante a Segunda Guerra. Símbolo de coragem, líder tático e estrategista dos Vingadores.',
+        facts:['Força, resistência aumentadas','Escudo indestrutível de vibranium','Líder inspirador']
+      },
+      {
+        id:'thor', name:'Thor', ego:'Thor Odinson',
+        tags:['Força','Magia','Divindade'],
+        bio:'Deus do Trovão vindo de Asgard, empunha o Mjolnir (e posteriormente Stormbreaker) e controla relâmpagos e tempestades.',
+        facts:['Durabilidade e longevidade divinas','Controle do tempo/relâmpago','Guerreiro asgardiano']
+      },
+      {
+        id:'hulk', name:'Hulk', ego:'Bruce Banner',
+        tags:['Força','Regeneração'],
+        bio:'Quando o cientista Bruce Banner fica enfurecido, ele se transforma no Hulk — uma criatura de força colosal. Força aumenta com a raiva.',
+        facts:['Força praticamente ilimitada','Alta regeneração','Vulnerável a manipulação emocional']
+      },
+      {
+        id:'widow', name:'Black Widow', ego:'Natasha Romanoff',
+        tags:['Furtividade','Agilidade','Espionagem'],
+        bio:'Ex-agente russa e espiã, treinada em artes marciais e infiltração. Membro essencial dos Vingadores em missões secretas.',
+        facts:['Especialista em combate corpo a corpo','Espiã e infiltradora','Treinamento em armas e furtividade']
+      },
+      {
+        id:'spider', name:'Spider-Man', ego:'Peter Parker',
+        tags:['Agilidade','Reflexos','Inteligência'],
+        bio:'Jovem com poderes aracnídeos: força proporcional, agilidade e sentido aranha. Um herói de trânsito e ciência, sempre reformulando equipamentos.',
+        facts:['Sentido Aranha e reflexos aprimorados','Escalar paredes','LanÃ§adores de teia feitos por ele']
+      },
+      {
+        id:'blackpanther', name:'Black Panther', ego:'T\'Challa',
+        tags:['Agilidade','Força','Tática'],
+        bio:'Rei de Wakanda — nação tecnologicamente avançada. O manto de Pantera Negra confere força, velocidade e sentidos aprimorados.',
+        facts:['Traje de vibranium','Líder e estrategista','Tecnologia avançada de Wakanda']
+      },
+      {
+        id:'strange', name:'Doctor Strange', ego:'Stephen Strange',
+        tags:['Magia','Misticismo','Manipulação dimensional'],
+        bio:'Antigo neurocirurgião que se tornou o Mago Supremo. Usa feitiços, artefatos místicos e manipulação de realidades para proteger o multiverso.',
+        facts:['Mestria em feitiçaria','Amuletos e artefatos (Olho de Agamotto)','Manipulação de tempo e dimensões']
+      }
+    ];
+
+    const grid = document.getElementById('grid');
+    const search = document.getElementById('search');
+    const filter = document.getElementById('filter');
+    const backdrop = document.getElementById('backdrop');
+    const closeBtn = document.getElementById('closeBtn');
+
+    function render(list){
+      grid.innerHTML='';
+      list.forEach(h => {
+        const el = document.createElement('article');
+        el.className = 'card';
+        el.tabIndex = 0;
+        el.setAttribute('data-id', h.id);
+
+        el.innerHTML = `
+          <div class="hero-badge ${h.accent}">${h.name.split(' ')[0]}</div>
+          <h3 class="hero-name">${h.name}</h3>
+          <div class="hero-ego">${h.ego}</div>
+          <div class="stats">
+            ${h.tags.map(t=>`<div class="stat">${t}</div>`).join('')}
+          </div>
+        `;
+
+        el.addEventListener('click',()=>openModal(h));
+        el.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter' || ev.key===' ') { ev.preventDefault(); openModal(h);} });
+        grid.appendChild(el);
+      })
+    }
+
+    function openModal(hero){
+      document.getElementById('m-name').textContent = hero.name;
+      document.getElementById('m-ego').textContent = hero.ego;
+      document.getElementById('m-bio').textContent = hero.bio;
+      document.getElementById('m-first').textContent = hero.first;
+      const list = document.getElementById('m-list'); list.innerHTML='';
+      hero.facts.forEach(f=>{ const li=document.createElement('li'); li.textContent=f; list.appendChild(li)});
+      const tags = document.getElementById('m-tags'); tags.textContent = hero.tags.join(' • ');
+      const portrait = document.getElementById('m-portrait');
+      portrait.textContent = hero.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+
+      ['accent-iron','accent-cap','accent-thor','accent-hulk','accent-widow','accent-spider','accent-blackpan','accent-strange'].forEach(c=>portrait.classList.remove(c));
+      portrait.classList.add(hero.accent);
+
+      backdrop.style.display='flex';
+      backdrop.setAttribute('aria-hidden','false');
+      document.addEventListener('keydown', escHandler);
+    }
+
+    function closeModal(){
+      backdrop.style.display='none';
+      backdrop.setAttribute('aria-hidden','true');
+      document.removeEventListener('keydown', escHandler);
+    }
+    function escHandler(e){ if(e.key==='Escape') closeModal(); }
+
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', (ev)=>{ if(ev.target === backdrop) closeModal(); });
+
+    function applyFilters(){
+      const q = search.value.trim().toLowerCase();
+      const f = filter.value;
+      const filtered = HEROES.filter(h=>{
+        const matchesQ = !q || [h.name, h.ego, h.bio, h.tags.join(' ')].join(' ').toLowerCase().includes(q);
+        const matchesF = f==='all' || h.tags.map(t=>t.toLowerCase()).some(t=>{
+          if(f==='tech') return t.includes('tecnologia') || t.includes('gênio') || t.includes('bilionário');
+          if(f==='strength') return t.includes('força');
+          if(f==='magic') return t.includes('magia') || t.includes('misticismo') || t.includes('divindade');
+          if(f==='agility') return t.includes('agilidade') || t.includes('reflexos');
+          if(f==='stealth') return t.includes('furtividade') || t.includes('espiã');
+          return false;
+        });
+        return matchesQ && matchesF;
+      });
+      render(filtered);
+    }
+
+    search.addEventListener('input', applyFilters);
+    filter.addEventListener('change', applyFilters);
+
+    render(HEROES);
+
+    search.focus();
+  </script>
+</body>
+</html>
